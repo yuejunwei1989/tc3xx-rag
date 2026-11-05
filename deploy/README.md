@@ -112,7 +112,7 @@ docker compose -f deploy/docker-compose.remote.yml up -d
 `/info` 返回示例：
 ```json
 {"name":"tc397-rag","coverage":{"manuals":"...7006 页","sdk":"...1987 文件",
-  "indexed_documents":2842,"indexed_chunks":27170},
+  "indexed_documents":2842,"indexed_chunks":27172},
  "tools":[{"name":"search_docs"},{"name":"list_docs"},{"name":"index_doc"},{"name":"remove_doc"}]}
 ```
 

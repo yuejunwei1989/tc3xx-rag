@@ -14,7 +14,7 @@
 | iLLD 源码（TC3xx） | 1987 个 .c/.h | 1987 | 官方低层驱动库源码 |
 | iLLD API 文档（CHM → MD） | 1667 个页面 | 1667 | Doxygen 生成的函数/结构体说明 |
 
-**合计 2842 个文档、27170 个 chunk。** 手册总页数 7314 页（含勘误表）。
+**合计 2842 个文档、27172 个 chunk。** 手册总页数 7314 页（含勘误表）。
 
 ## 目录结构
 
@@ -23,7 +23,7 @@
 ├── .venv/                       # Python 3.11 虚拟环境（已装好依赖）
 ├── .em_rag/
 │   ├── config.yaml              # 工程配置（PDF 后端 / 分块 / 存储路径）
-│   ├── chroma_db/               # 向量库（27170 条）
+│   ├── chroma_db/               # 向量库（27172 条）
 │   ├── fts.db                   # SQLite FTS5 全文索引
 │   └── figures/                 # 手册页面截图（时序图/波形页）
 ├── models/all-MiniLM-L6-v2/     # ONNX 嵌入模型（384 维，本地推理）
@@ -77,7 +77,9 @@ cd /workspace/tc397-rag
 | `CAN baud rate calculation prescaler` | iLLD CAN API | IfxCan_Can 初始化函数 |
 | `GTM TOM PWM 频率` | iLLD PWM 驱动 | Pwm Functions / DataStructures / 用法 |
 | `IfxCan_Can_setBaudrate` | iLLD 头文件 | 结构体定义（得分 1.0 → 0.83 递减） |
-| `FlexRay_AI.103 loop back acceptance filtering workaround` | 勘误表 p.46 | Description / Scope / Effects / Workaround 全文 |
+| `FlexRay_AI.103 Received messages not stored ...` | 勘误表 p.46 | 正文条目首位命中（编号加权生效） |
+| `DMA_TC.067 double buffering buffer overflow workaround` | 勘误表 p.33 | Description / Workaround 全文 |
+| `ADC_TC.086` | 勘误表 p.22 | 正文条目首位命中 |
 
 ### 查勘误表（硅片已知问题）
 
