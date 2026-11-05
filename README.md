@@ -43,10 +43,54 @@
 ```bash
 cd /workspace/tc397-rag
 ./.venv/bin/python -m src.cli search "QSPI baud rate configuration"
-./.venv/bin/python -m src.cli search "IfxCan_Can_setBaudrate"     # 代码符号精确查
+./.venv/bin/python -m src.cli search "IfxQspi_SpiMaster_initModule"   # 代码符号精确查
 ./.venv/bin/python -m src.cli list                                # 已索引文档列表
 ./.venv/bin/python -m src.cli add <文件或目录>                     # 增量索引
 ```
+
+### 删除文档
+
+先查 `doc_id`（文件名去掉扩展名，空格转下划线），再按 `doc_id` 删除：
+
+```bash
+./.venv/bin/python -m src.cli list                       # 查 doc_id
+./.venv/bin/python -m src.cli remove <doc_id>            # 删除
+```
+
+等价的便捷写法：
+
+```bash
+./deploy/add_docs.sh --remove <doc_id>
+```
+
+Agent 在对话中调用 MCP 工具 `remove_doc`，参数 `{"doc_id": "..."}`。
+
+**删除会清掉什么：**
+
+| 位置 | 操作 |
+|---|---|
+| Chroma 向量库 | 删除该 `doc_id` 的全部向量 |
+| SQLite FTS5 | 删除对应 chunk 记录 |
+| `data/documents/` 源 PDF | **保留**，需自行 `rm` |
+
+**批量删除**（例：清掉所有勘误表切片）：
+
+```bash
+for d in $(./.venv/bin/python -m src.cli list | grep errata | awk '{print $2}'); do
+  ./.venv/bin/python -m src.cli remove "$d"
+done
+```
+
+删除后验证：
+
+```bash
+./.venv/bin/python -m src.cli list | wc -l                       # 文档数应减少
+./.venv/bin/python -m src.cli search "<被删文档的关键词>" --top-k 3   # 应查不到
+```
+
+> ⚠️ **必须串行执行**，不要与其他 `add`/`remove` 并发——多进程写 Chroma 会损坏 HNSW 索引（查询时进程崩溃）。
+> 删除不可撤销，恢复只能重新 `add` 一次（源 PDF 在即可）。
+> 索引损坏时：`python -m src.cli doctor` 检查、`repair` 修复；严重时删掉 `chroma_db/<uuid>/` 目录让 Chroma 从 SQLite 重建。
 
 ### 接入 Claude Code / Codex / OpenCode
 
@@ -139,6 +183,6 @@ python -m src.cli search "HSPDM 通信失败 勘误"   # 中文需配英文寄�
 ## 注意事项
 
 - **中文提问建议带英文关键词**。手册是英文的，纯中文查询靠嵌入模型跨语言匹配，召回率不如中英混合。
-- **PPT/PDF 手册更新后需重建索引**：`remove` 旧文档再 `add` 新文件。
-- **向量库不要多进程并发写**。本次部署中曾因并发写入导致 HNSW 索引损坏（查询时进程崩溃）；修复方式是删除 `chroma_db/<segment-id>/` 目录让 Chroma 从 SQLite 重建。增量索引请串行执行。
+- **手册更新后按“先删后加”处理**：`remove` 旧文档再 `add` 新文件（见[删除文档](#删除文档)）。
+- **向量库不要多进程并发写**。本次部署中曾因并发写入导致 HNSW 索引损坏（查询时进程崩溃）；修复方式是删除 `chroma_db/<segment-id>/` 目录让 Chroma 从 SQLite 重建。增删操作请串行执行。
 - 首次查询需加载 ONNX 模型和向量索引，约 3–5 秒；之后常驻内存。

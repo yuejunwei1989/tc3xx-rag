@@ -81,6 +81,43 @@ Agent 调用 `index_doc` 工具，`path` 可以是**单文件、目录或 URL**�
 python -m src.cli add <path>     # 同 add_docs.sh 核心（无切片保护，大 PDF 慎用）
 ```
 
+## 删除文档
+
+先查 `doc_id`（文件名去扩展名，空格转下划线），再按 `doc_id` 删除：
+
+```bash
+./deploy/add_docs.sh --list                     # 查 doc_id
+./deploy/add_docs.sh --remove <doc_id>          # 删除
+# 等价写法
+python -m src.cli list
+python -m src.cli remove <doc_id>
+```
+
+MCP 工具：`remove_doc`，参数 `{"doc_id": "..."}`。
+
+**删除范围**：Chroma 向量 + SQLite FTS5 chunk 记录；`data/documents/` 下的源 PDF **保留**，需要时自行 `rm`。
+
+**批量删除示例**（清掉所有勘误表切片）：
+
+```bash
+for d in $(python -m src.cli list | grep errata | awk '{print $2}'); do
+  python -m src.cli remove "$d"
+done
+```
+
+**删除后验证**：
+
+```bash
+python -m src.cli list | wc -l                            # 文档数应减少
+python -m src.cli search "<被删文档的关键词>" --top-k 3      # 应查不到
+```
+
+> ⚠️ 串行执行，不要与其他 `add`/`remove` 并发——多进程写 Chroma 会损坏 HNSW 索引。
+> 删除不可撤销，恢复需重新 `add`。索引损坏时先 `python -m src.cli doctor` 检查、`repair` 修复；
+> 严重时删掉 `chroma_db/<uuid>/` 让 Chroma 从 SQLite 重建。
+
+**手册更新流程**：`remove` 旧 doc_id → `add` 新 PDF（文档有改动时不要只 `add`，否则新旧 chunk 混存）。
+
 > 所有写操作（无论哪条路径）请**串行执行**，不要多进程同时添加——并发写 Chroma 会损坏 HNSW 索引。
 
 ## 远程 MCP：让其他 Agent / 其他机器接入
