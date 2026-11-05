@@ -91,13 +91,19 @@ class Retriever:
             return results  # 精排服务不可用时静默回退，不阻塞检索
 
     def _extract_keywords(self, query: str) -> list[str]:
+        # 勘误/缺陷编号: FlexRay_AI.103, DMA_TC.067, GETH_TC.H003, ADC_TC.086
+        # 必须先于 compound 匹配，否则会被截成 FlexRay_AI 丢掉序号
+        errata_id = r'\b[A-Za-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+\.[A-Z]?\d+\b'
         # 带下划线的复合寄存器名优先匹配: SPI_CR1, GPIO_ODR, RCC_APB2ENR
         compound = r'\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b'
         # 时序参数: tSU, tHD, tWR, tLOW, tHIGH, tAA, tDH
         timing = r'\bt[A-Z][A-Z0-9.]*\b'
         # 2+ 字符的全大写词: TMOD, TCON, SPI, T2CON, TH0, IE, IP
         single = r'\b[A-Z][A-Z0-9]+\b'
-        matches = re.findall(f"{compound}|{timing}|{single}", query)
+        # iLLD 驼峰 API 名: IfxCan_Can_setBaudrate, IfxQspi_SpiMaster_initModule
+        # 旧规则只认全大写，导致这类查询提取不到任何关键词、只能走向量召回
+        camel_api = r'\bIfx[A-Za-z0-9]*(?:_[A-Za-z0-9]+)+\b'
+        matches = re.findall(f"{errata_id}|{compound}|{timing}|{single}|{camel_api}", query)
         domain_terms = [
             "时序", "波形", "应答", "非应答", "应答查询",
             "起始", "停止", "字节写", "页写", "写周期",

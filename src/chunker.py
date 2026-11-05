@@ -125,6 +125,12 @@ class Chunker:
         if buffer and buffer[-1].context_chain != new_el.context_chain:
             return True
 
+        # 跨页切分：chunk 的 page 取自首个元素，跨页合并会让后续页内容
+        # 的页码归属错误（errata/手册条目标注页码与实际页不符）。
+        # 同时避免多条独立条目被压成一个大 chunk，降低条目内聚性。
+        if buffer and new_el.page != buffer[-1].page and current_tokens >= self.max_tokens // 2:
+            return True
+
         return False
 
     def _flush_text_buffer(
@@ -136,7 +142,9 @@ class Chunker:
 
         combined = "\n\n".join(el.content for el in buffer)
         context = buffer[0].context_chain or fallback_context
-        page = buffer[0].page
+        pages = [el.page for el in buffer if el.page is not None]
+        page = min(pages) if pages else buffer[0].page
+        page_span = (min(pages), max(pages)) if pages else None
 
         token_est = len(combined) // 3
         if token_est <= self.max_tokens:
@@ -145,6 +153,7 @@ class Chunker:
                 context_chain=context,
                 element_type="text",
                 page=page,
+                metadata={"page_span": list(page_span)} if page_span and page_span[0] != page_span[1] else {},
             )]
 
         # 超长文本按段落切分

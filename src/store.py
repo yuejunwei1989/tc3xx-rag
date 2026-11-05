@@ -234,6 +234,12 @@ class FTSStore:
         self, results: list[dict], keywords: list[str]
     ) -> list[dict]:
         timing_query = self._is_timing_query(keywords)
+        errata_ids = [kw for kw in keywords if re.fullmatch(
+            r"[A-Za-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+\.[A-Z]?\d+", kw
+        )]
+        # 编号检索时应命中的是"条目正文"而非概览表：正文页含 Description/
+        # Scope/Effects/Workaround 小标题，概览表只有编号+标题+页码。
+        body_markers = ("workaround", "description", "scope", "effects")
         scored = []
         for index, result in enumerate(results):
             meta = result.get("metadata", {})
@@ -242,11 +248,21 @@ class FTSStore:
                 result.get("content") or "",
                 meta.get("context_chain", ""),
             ])
+            lower = text.lower()
             score = 0.0
             score += self._keyword_hit_count(text, keywords) * 8
+            if errata_ids:
+                exact = sum(1 for kw in errata_ids if kw.lower() in lower)
+                score += exact * 60          # 编号命中权重远高于普通词
+                if exact:
+                    score += sum(1 for m in body_markers if m in lower) * 12
             if meta.get("element_type") == "figure":
-                score += 30 if timing_query else 10
-            if meta.get("related_images") not in ("", "[]", None):
+                # 编号检索时 figure 页几乎总是噪声（整页截图 caption 匹配）
+                if errata_ids:
+                    score -= 40
+                else:
+                    score += 30 if timing_query else 10
+            if meta.get("related_images") not in ("", "[]", None) and not errata_ids:
                 score += 5
             score += max(0, 20 - int(meta.get("page", 0) or 0)) * 0.05
             score -= index * 0.01
