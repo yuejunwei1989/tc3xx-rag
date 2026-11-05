@@ -30,6 +30,8 @@ dl data/documents/tc39x-usermanual.pdf "https://www.infineon.com/assets/row/publ
 dl data/documents/tc3xx-part1.pdf       "https://www.infineon.com/assets/row/public/documents/10/44/infineon-aurix-tc3xx-part1-usermanual-en.pdf"
 dl data/documents/tc3xx-part2.pdf       "https://www.infineon.com/assets/row/public/documents/10/44/infineon-aurix-tc3xx-part2-usermanual-en.pdf"
 dl data/documents/tricore-arch-vol1.pdf "https://www.infineon.com/row/public/documents/10/44/infineon-aurix-architecture-vol1-usermanual-en.pdf"
+# TC39x BD-step 勘误表（Errata Sheet v2.7 / 308 页）— 硅片已知偏差 + Workaround
+dl data/documents/tc39x-bd-errata-sheet.pdf "https://www.infineon.com/assets/row/public/documents/10/52/infineon-aurix-tc39x-bd-step-errata-sheet-en.pdf"
 
 # ---------------------------------------------------------------------------
 # 2. iLLD 源码（sparse checkout 只取 src/BaseSw/iLLD/TC3xx，约 39MB）
@@ -93,7 +95,7 @@ fi
 echo "==> [4/4] 大 PDF 切片"
 $PY - <<'EOF' 2>&1 | grep -v Warning
 import fitz, os
-for name in ['tc3xx-part1','tc3xx-part2']:
+for name in ['tc3xx-part1','tc3xx-part2','tc39x-bd-errata-sheet']:
     src=f'data/documents/{name}.pdf'
     if not os.path.exists(src): continue
     d0=fitz.open(src); n=d0.page_count; d0.close()

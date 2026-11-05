@@ -10,10 +10,11 @@
 | AURIX TC3xx User Manual Part-1 | 2080 页 | 约 9800 | 平台通用：CPU、存储器、总线、DMA |
 | AURIX TC3xx User Manual Part-2 | 3561 页 | 约 14400 | 平台通用：GTM、ADC、CAN、QSPI 等外设 |
 | TriCore TC1.6.2 Core Architecture Vol.1 | 206 页 | 439 | 指令集、寄存器模型、寻址方式 |
+| **TC39x BD-step Errata Sheet (v2.7)** | **308 页** | **463** | **硅片已知偏差清单：功能缺陷 / 应用提示 + Workaround** |
 | iLLD 源码（TC3xx） | 1987 个 .c/.h | 1987 | 官方低层驱动库源码 |
 | iLLD API 文档（CHM → MD） | 1667 个页面 | 1667 | Doxygen 生成的函数/结构体说明 |
 
-**合计 2840 个文档、26707 个 chunk。** 手册总页数 7006 页。
+**合计 2842 个文档、27170 个 chunk。** 手册总页数 7314 页（含勘误表）。
 
 ## 目录结构
 
@@ -22,12 +23,12 @@
 ├── .venv/                       # Python 3.11 虚拟环境（已装好依赖）
 ├── .em_rag/
 │   ├── config.yaml              # 工程配置（PDF 后端 / 分块 / 存储路径）
-│   ├── chroma_db/               # 向量库（26707 条）
+│   ├── chroma_db/               # 向量库（27170 条）
 │   ├── fts.db                   # SQLite FTS5 全文索引
 │   └── figures/                 # 手册页面截图（时序图/波形页）
 ├── models/all-MiniLM-L6-v2/     # ONNX 嵌入模型（384 维，本地推理）
 ├── data/
-│   ├── documents/               # 手册 PDF（Part1/Part2 已按 300 页切片）
+│   ├── documents/               # 手册 PDF + 勘误表（Part1/Part2/Errata 已按页切片）
 │   ├── illd/                    # iLLD 源码
 │   └── illd_api/                # iLLD API 文档（Markdown）
 ├── .mcp.json                    # MCP 配置（agent 直接读这个）
@@ -40,10 +41,10 @@
 
 ```bash
 cd /workspace/tc397-rag
-./.venv/bin/python -m em_rag search "QSPI baud rate configuration"
-./.venv/bin/python -m em_rag search "IfxCan_Can_setBaudrate"     # 代码符号精确查
-./.venv/bin/python -m em_rag list                                # 已索引文档列表
-./.venv/bin/python -m em_rag add <文件或目录>                     # 增量索引
+./.venv/bin/python -m src.cli search "QSPI baud rate configuration"
+./.venv/bin/python -m src.cli search "IfxCan_Can_setBaudrate"     # 代码符号精确查
+./.venv/bin/python -m src.cli list                                # 已索引文档列表
+./.venv/bin/python -m src.cli add <文件或目录>                     # 增量索引
 ```
 
 ### 接入 Claude Code / Codex / OpenCode
@@ -76,6 +77,21 @@ cd /workspace/tc397-rag
 | `CAN baud rate calculation prescaler` | iLLD CAN API | IfxCan_Can 初始化函数 |
 | `GTM TOM PWM 频率` | iLLD PWM 驱动 | Pwm Functions / DataStructures / 用法 |
 | `IfxCan_Can_setBaudrate` | iLLD 头文件 | 结构体定义（得分 1.0 → 0.83 递减） |
+| `FlexRay_AI.103 loop back acceptance filtering workaround` | 勘误表 p.46 | Description / Scope / Effects / Workaround 全文 |
+
+### 查勘误表（硅片已知问题）
+
+勘误表每条目结构固定为 **Description / Scope / Effects / Workaround**，概述表（第 4–18 页）列出全部编号。
+检索时**带上编号或症状关键词**效果最好：
+
+```bash
+python -m src.cli search "DMA_TC.067 double buffering buffer overflow workaround"
+python -m src.cli search "GETH_AI.001 errata"
+python -m src.cli search "HSPDM 通信失败 勘误"   # 中文需配英文寄存器/模块名
+```
+
+编号命名规则：`模块_类别.序号`，类别 `TC`=功能缺陷（Functional deviation）、`AI`=应用提示（Application hint）、`H`/`P`=应用/参数偏差。
+例：`DMA_TC.067`、`FlexRay_AI.103`、`GETH_TC.H003`。
 
 ## 本次部署中修复的两个缺陷
 

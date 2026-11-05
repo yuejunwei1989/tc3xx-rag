@@ -1,7 +1,7 @@
 # TC397 + iLLD 知识库 — 部署指南
 
 本地 RAG 知识库（基于 [em_rag](https://github.com/LeoKemp223/em_rag)，含 2 处修复补丁），
-覆盖 AURIX TC397 芯片手册（7006 页）+ iLLD 驱动库（1987 个源文件 + 1667 页 API 文档），
+覆盖 AURIX TC397 芯片手册（7006 页）+ **BD-step 勘误表（308 页）** + iLLD 驱动库（1987 个源文件 + 1667 页 API 文档），
 通过 MCP 接入 Claude Code / Codex / OpenCode。
 
 ## 内容清单
@@ -11,7 +11,7 @@ deploy/
 ├── Dockerfile          # 容器镜像（python3.11-slim + p7zip）
 ├── docker-compose.yml  # volume 持久化 models/data/index
 ├── install.sh          # 主机部署：venv + 依赖 + 嵌入模型
-├── setup_data.sh       # 数据获取：手册PDF + iLLD + CHM转MD + 大PDF切片
+├── setup_data.sh       # 数据获取：手册PDF + 勘误表 + iLLD + CHM转MD + 大PDF切片
 ├── rebuild_index.sh    # 索引重建（串行，防并发损坏）
 ├── add_docs.sh         # 手动添加文档/代码（大 PDF 自动切片，--list/--remove）
 ├── serve_remote.sh     # 远程 MCP 服务（HTTP+SSE，供其他 Agent 接入）
@@ -77,7 +77,7 @@ Agent 调用 `index_doc` 工具，`path` 可以是**单文件、目录或 URL**�
 ### 3. CLI
 
 ```bash
-python -m em_rag add <path>     # 同 add_docs.sh 核心（无切片保护，大 PDF 慎用）
+python -m src.cli add <path>     # 同 add_docs.sh 核心（无切片保护，大 PDF 慎用）
 ```
 
 > 所有写操作（无论哪条路径）请**串行执行**，不要多进程同时添加——并发写 Chroma 会损坏 HNSW 索引。
@@ -105,14 +105,14 @@ docker compose -f deploy/docker-compose.remote.yml up -d
 | 端点 | 用途 |
 |---|---|
 | `GET /sse` | MCP 传输通道（客户端连这个） |
-| `GET /info` | **能力发现**：返回工具清单 + 数据覆盖范围（7006 页手册 / 1987 文件 SDK / 2840 文档索引），其他 Agent 可先探测再决定是否调用 |
+| `GET /info` | **能力发现**：返回工具清单 + 数据覆盖范围（7006 页手册 / 308 页勘误表 / 1987 文件 SDK / 2842 文档索引），其他 Agent 可先探测再决定是否调用 |
 | `GET /health` | 健康检查，供 K8s/负载均衡探活 |
 | `GET /.well-known/mcp.json` | MCP 发现入口（部分客户端自动探测） |
 
 `/info` 返回示例：
 ```json
 {"name":"tc397-rag","coverage":{"manuals":"...7006 页","sdk":"...1987 文件",
-  "indexed_documents":2840,"indexed_chunks":26707},
+  "indexed_documents":2842,"indexed_chunks":27170},
  "tools":[{"name":"search_docs"},{"name":"list_docs"},{"name":"index_doc"},{"name":"remove_doc"}]}
 ```
 
@@ -199,9 +199,9 @@ cd ~/tc397-rag
 
 | 事项 | 操作 |
 |---|---|
-| 增量加文档 | `python -m em_rag add <path>`（串行！） |
-| 删除文档 | `python -m em_rag remove <doc_id>` |
-| 环境自检 | `python -m em_rag doctor` |
+| 增量加文档 | `python -m src.cli add <path>`（串行！） |
+| 删除文档 | `python -m src.cli remove <doc_id>` |
+| 环境自检 | `python -m src.cli doctor` |
 | Chroma 查询崩溃 | HNSW 段损坏（并发写导致）：删 `.em_rag/chroma_db/<uuid>/` 目录，重启自动从 SQLite 重建 |
 | 中文检索 | 建议中英混合（`GTM TOM PWM 频率`），纯中文召回率低 |
 | 换嵌入模型 | 改 `config.yaml` embedding 段 + 重新全量索引 |
@@ -209,9 +209,9 @@ cd ~/tc397-rag
 ## 验证清单（部署后逐项跑）
 
 ```bash
-python -m em_rag doctor            # model.onnx: ok / sqlite.fts5: ok
-python -m em_rag list | wc -l      # ~2840 文档
-python -m em_rag search "QSPI baud rate configuration"   # 命中 TC39x 手册 p.1032-1035
-python -m em_rag search "IfxCan_Can_setBaudrate"         # 命中 iLLD 头文件
-python -m em_rag search "GTM TOM PWM 频率"               # 中英混合命中 PWM 驱动
+python -m src.cli doctor            # model.onnx: ok / sqlite.fts5: ok
+python -m src.cli list | wc -l      # ~2842 文档
+python -m src.cli search "QSPI baud rate configuration"   # 命中 TC39x 手册 p.1032-1035
+python -m src.cli search "IfxCan_Can_setBaudrate"         # 命中 iLLD 头文件
+python -m src.cli search "GTM TOM PWM 频率"               # 中英混合命中 PWM 驱动
 ```

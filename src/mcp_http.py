@@ -80,6 +80,7 @@ def build_app() -> Starlette:
             "description": "AURIX TC397 芯片手册 + iLLD 驱动库知识库（本地 RAG）",
             "coverage": {
                 "manuals": "TC39x-B / TC3xx Part1-2 / TriCore TC1.6.2 架构，共 7006 页",
+                "errata": "TC39x BD-step Errata Sheet v2.7，308 页 / 详细偏差条目含 Workaround",
                 "sdk": "iLLD TC3xx 源码 1987 文件 + API 文档 1667 页",
                 **stats,
             },
