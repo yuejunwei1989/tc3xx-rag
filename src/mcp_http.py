@@ -81,6 +81,7 @@ def build_app() -> Starlette:
             "coverage": {
                 "manuals": "TC39x-B / TC3xx Part1-2 / TriCore TC1.6.2 架构，共 7006 页",
                 "errata": "TC39x BD-step Errata Sheet v2.7，308 页 / 详细偏差条目含 Workaround",
+                "hsm": "HSM 公开培训 11 页 + 手册内 HSM/UCB_HSMCFG 章节；完整 HSM TS 需 myICP 权限",
                 "sdk": "iLLD TC3xx 源码 1987 文件 + API 文档 1667 页",
                 **stats,
             },

@@ -11,9 +11,10 @@ deploy/
 ├── Dockerfile          # 容器镜像（python3.11-slim + p7zip）
 ├── docker-compose.yml  # volume 持久化 models/data/index
 ├── install.sh          # 主机部署：venv + 依赖 + 嵌入模型
-├── setup_data.sh       # 数据获取：手册PDF + 勘误表 + iLLD + CHM转MD + 大PDF切片
+├── setup_data.sh       # 数据获取：手册PDF + 勘误表 + HSM培训 + iLLD + CHM转MD + 大PDF切片
 ├── rebuild_index.sh    # 索引重建（串行，防并发损坏）
 ├── add_docs.sh         # 手动添加文档/代码（大 PDF 自动切片，--list/--remove）
+├── add_myicp.sh        # 导入 myICP 权限文档（HSM TS / Safety Manual 等）
 ├── serve_remote.sh     # 远程 MCP 服务（HTTP+SSE，供其他 Agent 接入）
 ├── docker-compose.remote.yml  # 远程 MCP 容器（复用同一组 volume）
 ├── gpu/
@@ -105,14 +106,14 @@ docker compose -f deploy/docker-compose.remote.yml up -d
 | 端点 | 用途 |
 |---|---|
 | `GET /sse` | MCP 传输通道（客户端连这个） |
-| `GET /info` | **能力发现**：返回工具清单 + 数据覆盖范围（7006 页手册 / 308 页勘误表 / 1987 文件 SDK / 2842 文档索引），其他 Agent 可先探测再决定是否调用 |
+| `GET /info` | **能力发现**：返回工具清单 + 数据覆盖范围（7006 页手册 / 308 页勘误表 / HSM 概览 / 1987 文件 SDK / 2843 文档索引），其他 Agent 可先探测再决定是否调用 |
 | `GET /health` | 健康检查，供 K8s/负载均衡探活 |
 | `GET /.well-known/mcp.json` | MCP 发现入口（部分客户端自动探测） |
 
 `/info` 返回示例：
 ```json
 {"name":"tc397-rag","coverage":{"manuals":"...7006 页","sdk":"...1987 文件",
-  "indexed_documents":2842,"indexed_chunks":27172},
+  "indexed_documents":2843,"indexed_chunks":27178},
  "tools":[{"name":"search_docs"},{"name":"list_docs"},{"name":"index_doc"},{"name":"remove_doc"}]}
 ```
 
@@ -182,9 +183,33 @@ cd ~/tc397-rag
 | AURIX TC39x-B User Manual | infineon.com 官方直链 | 6.4MB / 1159 页 |
 | AURIX TC3xx User Manual Part-1/2 | infineon.com 官方直链 | 71MB / 5641 页 |
 | TriCore TC1.6.2 Arch Manual Vol.1 | infineon.com 官方直链 | 6.2MB / 206 页 |
+| TC39x BD-step Errata Sheet v2.7 | infineon.com 官方直链 | 2.4MB / 308 页 |
+| TC3xx HSM Quick Training | infineon.com 官方直链 | 0.5MB / 11 页 |
 | iLLD 源码 | github.com/Infineon/illd_release_tc3x (sparse checkout src/BaseSw/iLLD/TC3xx) | 39MB / 1987 文件 |
 | iLLD API 文档 | 同仓库 doc/iLLD-UM-TC3xx.chm → 7z 解压 → BS4 转 MD | 20MB / 1667 文件 |
 | 嵌入模型 | sentence-transformers/all-MiniLM-L6-v2 (ONNX)，HF 被墙自动走 hf-mirror | 90MB |
+
+### 需要权限的资料（不在自动流程内）
+
+以下文档**不在公开 CDN 上**，无法由 `setup_data.sh` 拉取，需用 myICP 账号手动下载后导入：
+
+| 文档 | 内容 | myICP 路径 |
+|---|---|---|
+| `HSM_TS_V2.0_Rev2.0` | HSM 技术规范（寄存器/指令集/服务调用） | AURIX TC3xx / 10 AURIX TC3xx HSM |
+| `AURIX-TC3xx_HSM-ES` | HSM 勘误表 | 同上 |
+| `AP32373` | HSM Demo 示例说明 | 同上 / 06 Application Notes |
+| `AP32391` | 使用 HSM 实现安全启动 | 同上 |
+| Safety Manual | 功能安全手册（ASIL 相关） | AURIX TC3xx / 00 General / 02 Safety Documentation |
+
+> HSM 在 myICP 上是**独立授权**，与 TC3xx 普通文档权限不是一套，需单独申请。
+> 申请入口：<https://www.infineon.com/cms/en/product/promopage/MyICP-platform-for-Microcontroller/>
+
+拿到 PDF 后一条命令导入：
+
+```bash
+./deploy/add_myicp.sh ~/Downloads/HSM_TS_V2.0_Rev2.0.pdf   # 自动切片 + 索引
+./deploy/add_myicp.sh --check                              # 查看已导入的 HSM/Safety 文档
+```
 
 ## 已含的修复补丁（相对上游 em_rag）
 

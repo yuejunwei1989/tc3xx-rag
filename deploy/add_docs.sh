@@ -12,9 +12,9 @@ cd "$(dirname "$0")/.."
 PY=./.venv/bin/python
 
 case "${1:-}" in
-  --list)   exec $PY -m em_rag list ;;
+  --list)   exec $PY -m src.cli list ;;
   --remove) [ -n "${2:-}" ] || { echo "用法: $0 --remove <doc_id>（doc_id 见 --list）"; exit 1; }
-            exec $PY -m em_rag remove "$2" ;;
+            exec $PY -m src.cli remove "$2" ;;
   "")       grep '^#' "$0" | sed 's/^# \?//'; exit 0 ;;
 esac
 
@@ -43,7 +43,7 @@ for i in range(0, n, step):
 EOF
     echo "==> 索引切片"
     for f in "$OUT"/"$(basename "${TARGET%.pdf}")"-p*.pdf; do
-      $PY -m em_rag add "$f" 2>&1 | grep -E "索引完成|索引失败" || true
+      $PY -m src.cli add "$f" 2>&1 | grep -E "索引完成|索引失败" || true
     done
     echo "==> 完成。原始 PDF 保留在原位置，可删除切片: rm -rf $OUT"
     exit 0
@@ -51,7 +51,7 @@ EOF
 fi
 
 echo "==> 索引 $TARGET"
-$PY -m em_rag add "$TARGET"
+$PY -m src.cli add "$TARGET"
 
 echo "==> 验证:"
 $PY - <<'EOF'

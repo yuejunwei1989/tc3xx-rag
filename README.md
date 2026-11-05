@@ -10,11 +10,12 @@
 | AURIX TC3xx User Manual Part-1 | 2080 页 | 约 9800 | 平台通用：CPU、存储器、总线、DMA |
 | AURIX TC3xx User Manual Part-2 | 3561 页 | 约 14400 | 平台通用：GTM、ADC、CAN、QSPI 等外设 |
 | TriCore TC1.6.2 Core Architecture Vol.1 | 206 页 | 439 | 指令集、寄存器模型、寻址方式 |
-| **TC39x BD-step Errata Sheet (v2.7)** | **308 页** | **463** | **硅片已知偏差清单：功能缺陷 / 应用提示 + Workaround** |
+| **TC39x BD-step Errata Sheet (v2.7)** | **308 页** | **465** | **硅片已知偏差清单：功能缺陷 / 应用提示 + Workaround** |
+| **TC3xx HSM Quick Training** | **11 页** | **6** | **HSM 硬件能力概览（AES128/TRNG/PKC/HASH、独立 DFlash 密钥存储）** |
 | iLLD 源码（TC3xx） | 1987 个 .c/.h | 1987 | 官方低层驱动库源码 |
 | iLLD API 文档（CHM → MD） | 1667 个页面 | 1667 | Doxygen 生成的函数/结构体说明 |
 
-**合计 2842 个文档、27172 个 chunk。** 手册总页数 7314 页（含勘误表）。
+**合计 2843 个文档、27178 个 chunk。** 手册总页数 7325 页（含勘误表与 HSM 培训）。
 
 ## 目录结构
 
@@ -23,7 +24,7 @@
 ├── .venv/                       # Python 3.11 虚拟环境（已装好依赖）
 ├── .em_rag/
 │   ├── config.yaml              # 工程配置（PDF 后端 / 分块 / 存储路径）
-│   ├── chroma_db/               # 向量库（27172 条）
+│   ├── chroma_db/               # 向量库（27178 条）
 │   ├── fts.db                   # SQLite FTS5 全文索引
 │   └── figures/                 # 手册页面截图（时序图/波形页）
 ├── models/all-MiniLM-L6-v2/     # ONNX 嵌入模型（384 维，本地推理）
@@ -94,6 +95,36 @@ python -m src.cli search "HSPDM 通信失败 勘误"   # 中文需配英文寄�
 
 编号命名规则：`模块_类别.序号`，类别 `TC`=功能缺陷（Functional deviation）、`AI`=应用提示（Application hint）、`H`/`P`=应用/参数偏差。
 例：`DMA_TC.067`、`FlexRay_AI.103`、`GETH_TC.H003`。
+
+### 关于 HSM 文档（重要限制）
+
+**已覆盖**（可直接检索）：
+
+| 来源 | 内容 | 规模 |
+|---|---|---|
+| TC3xx User Manual Part1 §6.5 | HSM Suspend、UCB_HSMCFG / UCB_HSM Interface Protection、HSM 相关 Flash 保护、UCB 配置序列 | 手册内 368 个 chunk 提到 HSM，其中 `UCB_HSMCFG` 32 处 |
+| TC3xx HSM Quick Training（公开） | HSM 硬件能力：AES128、TRNG、PKC、SHA-224/256、独立 DFlash 密钥存储 | 11 页 |
+
+**未覆盖**（需 myICP 权限，无法自动下载）：
+
+- `HSM_TS_V2.0_Rev2.0` — **HSM 技术规范**（寄存器、指令集、服务调用接口，最核心）
+- `AURIX-TC3xx_HSM-ES` — HSM 勘误表
+- `AP32373` — HSM Demo 示例说明
+- `AP32391` — 使用 HSM 实现安全启动
+- HSM 相关 UCB 编程细节、HSM 固件升级流程
+
+> HSM 在 myICP 上是**独立授权**（与 TC3xx 普通文档权限不同），需要单独申请。
+> 申请入口：<https://www.infineon.com/cms/en/product/promopage/MyICP-platform-for-Microcontroller/>
+> 审批通过后访问：`AURIX TC3xx/10 AURIX TC3xx HSM/`
+
+**补齐方法**：拿到权限后下载 PDF，一条命令导入：
+
+```bash
+./deploy/add_myicp.sh ~/Downloads/HSM_TS_V2.0_Rev2.0.pdf
+./deploy/add_myicp.sh --check      # 查看已导入的 HSM/Safety 文档
+```
+
+脚本会自动处理大 PDF 切片，导入后立即可被 MCP 客户端检索。
 
 ## 本次部署中修复的两个缺陷
 

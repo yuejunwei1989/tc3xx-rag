@@ -32,6 +32,8 @@ dl data/documents/tc3xx-part2.pdf       "https://www.infineon.com/assets/row/pub
 dl data/documents/tricore-arch-vol1.pdf "https://www.infineon.com/row/public/documents/10/44/infineon-aurix-architecture-vol1-usermanual-en.pdf"
 # TC39x BD-step 勘误表（Errata Sheet v2.7 / 308 页）— 硅片已知偏差 + Workaround
 dl data/documents/tc39x-bd-errata-sheet.pdf "https://www.infineon.com/assets/row/public/documents/10/52/infineon-aurix-tc39x-bd-step-errata-sheet-en.pdf"
+# HSM 快速培训（公开版，11 页）— 硬件能力概览；完整 HSM TS 需 myICP 权限，见 deploy/README.md
+dl data/documents/tc3xx-hsm-quick-training.pdf "https://www.infineon.com/assets/row/public/documents/10/56/infineon-aurix-tc3xx-hardware-security-module-quick-training-en.pdf"
 
 # ---------------------------------------------------------------------------
 # 2. iLLD 源码（sparse checkout 只取 src/BaseSw/iLLD/TC3xx，约 39MB）
