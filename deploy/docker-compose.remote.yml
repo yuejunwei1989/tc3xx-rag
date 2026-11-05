@@ -1,0 +1,42 @@
+# 远程 MCP 服务（HTTP + SSE）——供其他 Agent / 其他机器接入
+# 用法:
+#   docker compose -f docker-compose.remote.yml up -d
+#   客户端: {"mcpServers":{"tc397-rag":{"url":"http://<服务器IP>:8080/sse"}}}
+#
+# 说明: 本文件与 docker-compose.yml 共用同一组 named volume，
+#       因此先在那边跑完 setup 建好索引，这里直接复用。
+services:
+  rag-remote:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: tc397-rag:latest
+    container_name: tc397-rag-mcp
+    restart: unless-stopped
+    working_dir: /app
+    ports:
+      - "8080:8080"
+    volumes:
+      - rag_models:/app/models
+      - rag_data:/app/data
+      - rag_index:/app/.em_rag
+    environment:
+      - HF_ENDPOINT=https://hf-mirror.com
+    command: ["python", "-m", "em_rag.mcp_http", "--host", "0.0.0.0", "--port", "8080"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8080/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  rag_models:
+    external: true
+    name: deploy_rag_models
+  rag_data:
+    external: true
+    name: deploy_rag_data
+  rag_index:
+    external: true
+    name: deploy_rag_index

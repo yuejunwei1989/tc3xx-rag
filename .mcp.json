@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "em-rag": {
+      "command": "/workspace/tc397-rag/.venv/bin/python",
+      "args": [
+        "-m",
+        "em_rag.mcp_auto"
+      ],
+      "cwd": "/workspace/tc397-rag"
+    }
+  }
+}
