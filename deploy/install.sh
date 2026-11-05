@@ -13,10 +13,17 @@ echo "==> 目标目录: $TARGET"
 mkdir -p "$TARGET"
 cd "$TARGET"
 
-# 1. 拷贝源码
-echo "==> 拷贝 em_rag 源码（含修复补丁）"
-cp -r "$SRC_DIR/src" "$SRC_DIR/em_rag" "$SRC_DIR/scripts" .
-cp "$SRC_DIR/config.yaml" "$SRC_DIR/pyproject.toml" "$SRC_DIR/requirements.txt" .
+# 目标就是源码目录本身（clone 后直接 install .）时跳过拷贝，避免 cp 到自身
+if [ "$(pwd -P)" = "$SRC_DIR" ]; then
+  echo "  (目标即项目根目录，跳过源码拷贝)"
+else
+  # 1. 拷贝源码
+  echo "==> 拷贝 em_rag 源码（含修复补丁）"
+  cp -r "$SRC_DIR/src" "$SRC_DIR/em_rag" "$SRC_DIR/scripts" .
+  cp "$SRC_DIR/config.yaml" "$SRC_DIR/pyproject.toml" "$SRC_DIR/requirements.txt" .
+  mkdir -p deploy
+  cp -r "$SRC_DIR/deploy/." ./deploy/
+fi
 
 # 2. 虚拟环境 + 依赖
 echo "==> 创建 venv 并安装依赖"
@@ -25,19 +32,8 @@ python3.11 -m venv .venv
 ./.venv/bin/python -m pip install -q -r requirements.txt "mcp>=1,<2"
 ./.venv/bin/python -m pip install -q -e .
 
-# 3. 下载嵌入模型（HF 直连失败自动走 hf-mirror）
+# 3. 下载嵌入模型（复用 download_model.sh：HF 直连失败自动走 hf-mirror）
 echo "==> 下载 ONNX 嵌入模型 all-MiniLM-L6-v2"
-MODEL_DIR="models/all-MiniLM-L6-v2"
-mkdir -p "$MODEL_DIR"
-BASE_HF="https://hf-mirror.com/sentence-transformers/all-MiniLM-L6-v2/resolve/main"
-if ! ./.venv/bin/python -c "import os;assert os.path.getsize('$MODEL_DIR/model.onnx')>80_000_000" 2>/dev/null; then
-  for f in "onnx/model.onnx|model.onnx" "tokenizer.json|tokenizer.json" "tokenizer_config.json|tokenizer_config.json"; do
-    src="${f%%|*}"; dst="${f##*|}"
-    # 先试直连，403/超时走镜像
-    curl -sSL --max-time 120 -o "$MODEL_DIR/$dst" "https://huggingface.co/$src" 2>/dev/null \
-      || curl -sSL -o "$MODEL_DIR/$dst" "$BASE_HF/$src"
-  done
-fi
-ls -lh "$MODEL_DIR"
+./deploy/download_model.sh models/all-MiniLM-L6-v2 || echo "  !! 模型下载失败，可稍后重跑 ./deploy/download_model.sh"
 
 echo "==> 完成。下一步: ./deploy/setup_data.sh   （下载手册与 iLLD，约 80MB PDF + 32MB 源码）"

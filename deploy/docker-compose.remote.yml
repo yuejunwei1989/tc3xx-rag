@@ -22,7 +22,9 @@ services:
       - rag_index:/app/.em_rag
     environment:
       - HF_ENDPOINT=https://hf-mirror.com
-    command: ["python", "-m", "em_rag.mcp_http", "--host", "0.0.0.0", "--port", "8080"]
+    # ENTRYPOINT 是 python -m em_rag，这里用 entrypoint 清零后重新指定
+    entrypoint: ["python", "-m", "em_rag.mcp_http"]
+    command: ["--host", "0.0.0.0", "--port", "8080"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8080/health')"]
       interval: 30s

@@ -25,8 +25,10 @@ chunking:
   split_at_semantic_boundary: true
 
 storage:
-  chroma_path: "./data/chroma_db"
-  fts_path: "./data/fts.db"
+  # 相对本配置文件所在目录。容器与主机都希望索引落在 .em_rag/ 下
+  # （compose 的 rag_index 卷挂的就是 /app/.em_rag）
+  chroma_path: "./.em_rag/chroma_db"
+  fts_path: "./.em_rag/fts.db"
 
 figures:
   enabled: true

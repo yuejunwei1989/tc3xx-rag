@@ -17,6 +17,90 @@
 
 **合计 2843 个文档、27178 个 chunk。** 手册总页数 7325 页（含勘误表与 HSM 培训）。
 
+## 部署
+
+### 环境要求
+
+| 项目 | 最低 | 推荐 |
+|---|---|---|
+| CPU | 4 核 | 8 核 |
+| 内存 | 8GB（索引手册时峰值约 3GB/进程） | 16GB |
+| 磁盘 | 12GB | 20GB |
+| Python | 3.11+ | 3.11 |
+| 其他 | `git` `curl` `p7zip-full`（CHM 转换用） | — |
+
+GPU 可选：有 4090 走 bge-m3 + reranker 路线，见 `deploy/gpu/`。
+
+### 方式一：主机部署（不用 Docker）
+
+```bash
+git clone https://github.com/yuejunwei1989/tc3xx-rag.git
+cd tc3xx-rag
+
+# 1. 建 venv、装依赖、下载 ONNX 嵌入模型（~90MB）
+#    传 "." 表示装在当前目录；不传会新建 ./tc397-rag 子目录
+./deploy/install.sh .
+
+# 2. 下载数据：5 份手册 PDF + iLLD 源码 + iLLD API 文档（~100MB、15-30 分钟）
+./deploy/setup_data.sh
+
+# 3. 建索引：手册分片 + iLLD 源码 + API 文档（首次 40-60 分钟）
+./deploy/rebuild_index.sh
+
+# 4. 验证
+./.venv/bin/python -m src.cli search "QSPI baud rate configuration"
+```
+
+> 嵌入模型下载走 `deploy/download_model.sh`（优先 hf-mirror，避免直连超时白等）。单独重跑：`./deploy/download_model.sh models/all-MiniLM-L6-v2`
+> **索引必须串行**：`rebuild_index.sh` 已按串行写，不要自己并发跑多个 `add`。
+
+### 方式二：Docker
+
+```bash
+cd tc3xx-rag/deploy
+docker compose build
+
+# 首次初始化：下载数据 + 建索引（脚本用 --entrypoint bash 跑）
+docker compose run --rm --entrypoint bash rag deploy/setup_data.sh
+docker compose run --rm --entrypoint bash rag deploy/rebuild_index.sh
+
+# 日常检索（参数直接跟在 rag 后面）
+docker compose run --rm rag search "QSPI baud rate configuration"
+docker compose run --rm rag list
+docker compose run --rm rag remove <doc_id>
+```
+
+`docker-compose.yml` 挂了三个 volume（`rag_models` / `rag_data` / `rag_index`），容器重建不丢数据。
+远程 MCP 模式用 `docker-compose.remote.yml`，复用同一批 volume，只暴露 HTTP 端口：
+
+```bash
+# 前置：先创建 volume（remote.yml 用的是 external volume，未创建会报 not found）
+docker compose create rag
+
+docker compose -f docker-compose.remote.yml up -d
+curl http://localhost:8080/info     # 能力发现
+```
+
+> **构建加速**：Dockerfile 默认把 apt 和 pip 都指向腾讯云镜像（`DEBIAN_MIRROR` / `PIP_INDEX_URL` build-arg 可覆盖）。
+> 不改这两项时，pymupdf（69MB）、onnxruntime 这些大包在受限网络下会卡住，实测 40 分钟仍无进展；换镜像后约 2 分钟完成。
+>
+> **模型已打进镜像**（90MB ONNX，构建时经 hf-mirror 下载）。所以 `docker compose run` 首次检索就能用，不需要额外跑 `install.sh`。
+> 若构建时下载失败，容器启动后补执行：`docker compose run --rm --entrypoint bash rag deploy/download_model.sh`
+
+### 部署耗时参考（实测）
+
+| 步骤 | 耗时 | 说明 |
+|---|---|---|
+| `install.sh` | 3-5 分钟 | 主要耗在下载 ONNX 模型 |
+| `setup_data.sh` | 15-30 分钟 | 取决于网络；CHM 70MB 最容易卡住 |
+| `rebuild_index.sh` | 40-60 分钟 | 手册 PDF 占大头，每 300 页片约 45 秒 |
+
+### 部署后接入 MCP
+
+见下方[接入 Claude Code / Codex / OpenCode](#接入-claude-code--codex--opencode)，或 `deploy/serve_remote.sh` 起远程 SSE 服务供其他机器调用。
+
+完整部署文档（GPU 路线、多 Agent 共享、镜像加速细节）：[`deploy/README.md`](deploy/README.md)
+
 ## 目录结构
 
 ```

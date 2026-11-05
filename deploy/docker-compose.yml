@@ -1,12 +1,17 @@
-# 拉起方式一：一次性索引（首次部署）
-#   docker compose run --rm rag setup     # 下载手册+iLLD+模型并索引（约 40-60 分钟）
-# 拉起方式二：检索 CLI
-#   docker compose run --rm rag search "QSPI baud rate configuration"
-# MCP 接入：agent 端直接用 docker compose run 拉起 stdio server，
-#   .mcp.json 里 command 写 docker，args 写 compose run 即可（见 deploy/README.md）
+# 用途说明
+#   容器镜像的 CMD 是 ["python","-m","em_rag"]，`docker compose run` 会把
+#   `rag` 之后的参数**替换** CMD（而不是拼在 python 后面），所以：
+#     检索:      docker compose run --rm rag search "QSPI baud rate configuration"
+#     建索引:    docker compose run --rm rag add /app/data/documents/xxx.pdf
+#     跑脚本:    docker compose run --rm --entrypoint bash rag deploy/setup_data.sh
+#     （脚本必须用 --entrypoint bash，否则会被当作 em_rag 的子命令）
+# MCP 接入：agent 直接拉起 stdio server，.mcp.json 的 command 写 docker、
+#   args 写 compose + run，详见 deploy/README.md
 services:
   rag:
-    build: .
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
     image: tc397-rag:latest
     working_dir: /app
     volumes:
@@ -16,7 +21,6 @@ services:
     environment:
       - HF_ENDPOINT=https://hf-mirror.com
       # 国内网络可加代理镜像加速 GitHub raw 下载（脚本已内置多镜像 fallback）
-    entrypoint: ["python", "-m", "em_rag"]
 
 volumes:
   rag_models:

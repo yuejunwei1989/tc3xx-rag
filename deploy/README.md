@@ -129,6 +129,9 @@ stdio 模式只能本机由客户端拉起进程。要让**别的 Agent、别的
 ./deploy/serve_remote.sh 8080
 
 # 容器方式（复用已建好的索引 volume）
+# 前置：必须先在 docker-compose.yml 里执行过一次 create/run，
+#       否则 external volume deploy_rag_* 不存在会直接报错
+docker compose create rag
 docker compose -f deploy/docker-compose.remote.yml up -d
 ```
 
@@ -164,21 +167,21 @@ docker compose -f deploy/docker-compose.remote.yml up -d
 ## 方式一：Docker 部署（推荐）
 
 ```bash
-cd tc397-rag/deploy
+cd tc3xx-rag/deploy
 docker compose build
 
-# 首次：下载数据 + 建索引（40-60 分钟，只需一次）
-docker compose run --rm rag setup          # 见下方"容器内流程"
+# 首次：下载数据 + 建索引（60-90 分钟，只需一次）
+# 脚本用 --entrypoint bash 跑：镜像 ENTRYPOINT 是 python -m em_rag，
+# 直接写脚本名会被当成 em_rag 的子命令而报错
+docker compose run --rm --entrypoint bash rag deploy/setup_data.sh
+docker compose run --rm --entrypoint bash rag deploy/rebuild_index.sh
 
-# 验证
+# 日常检索（参数追加到 ENTRYPOINT 之后）
 docker compose run --rm rag search "QSPI baud rate configuration"
 ```
 
-容器内首次流程等价于：
-```bash
-/app/deploy/setup_data.sh && /app/deploy/rebuild_index.sh
-```
-
+构建上下文是仓库根目录（`context: ..`），因为 Dockerfile 需要 `src/`、`em_rag/`、`requirements.txt`。
+脚本内的解释器会自动探测：有 `.venv` 用 `.venv`（主机部署），没有就用系统 `python3`（容器内）。
 ### MCP 客户端接入（容器版）
 
 `.mcp.json`（Claude Code 项目级 / OpenCode 通用）：

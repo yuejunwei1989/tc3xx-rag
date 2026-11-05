@@ -9,7 +9,8 @@
 # =============================================================================
 set -euo pipefail
 cd "$(dirname "$0")/.."
-PY=./.venv/bin/python
+# 解释器：优先工程内 venv（主机部署），否则用系统 python3（Docker 容器内）
+if [ -x ./.venv/bin/python ]; then PY=./.venv/bin/python; else PY=$(command -v python3 || command -v python); fi
 
 case "${1:-}" in
   --list)   exec $PY -m src.cli list ;;
